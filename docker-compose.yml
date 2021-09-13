@@ -1,0 +1,34 @@
+version: "3.3"
+
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./docker/nginx:/etc/nginx/conf.d
+      - ./app:/var/www
+      - ./../open-genes-logs:/var/log/nginx
+    links:
+      - test-genes
+
+  mysql:
+    image: mysql:latest
+    volumes:
+      - ./../open-genes-mysql:/var/lib/mysql
+      - ./docker/mysql/charset.cnf:/etc/mysql/conf.d/charset.cnf
+    environment:
+      MYSQL_DATABASE: genes
+      MYSQL_USER: genes
+      MYSQL_ROOT_PASSWORD: rootgenes
+      MYSQL_PASSWORD: genes
+
+  test-genes:
+    build: ./docker/php
+    volumes:
+      - ./app:/var/www
+    image: test-genes
+    command: bash -c "./wait-for-it.sh mysql:3306 && composer install && /var/www/yii migrate --interactive=0 && php-fpm"
+    depends_on:
+      - mysql
+    user: "${UID}:${GID}"
